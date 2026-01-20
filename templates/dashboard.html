@@ -7,200 +7,35 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0d1120 100%);
-            color: #e0e6ff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            min-height: 100vh;
-            overflow-x: hidden;
+            color: #e0e6ff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh; overflow-x: hidden;
         }
-        
-        /* Animated background */
         body::before {
             content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: 
-                radial-gradient(circle at 20% 50%, rgba(0, 150, 255, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(100, 50, 255, 0.1) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: 0;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 20% 50%, rgba(0, 150, 255, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(100, 50, 255, 0.1) 0%, transparent 50%);
+            pointer-events: none; z-index: 0;
         }
-        
-        .container {
-            position: relative;
-            z-index: 1;
-            padding: 2rem 0;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 3rem;
-            padding: 2rem;
-            background: rgba(20, 25, 50, 0.5);
-            border: 1px solid rgba(100, 150, 255, 0.3);
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 0 30px rgba(0, 150, 255, 0.1);
-        }
-        
-        .header h1 {
-            font-size: 3rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #00d4ff, #6b6eff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 0.5rem;
-            text-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
-        }
-        
-        .header p {
-            font-size: 1.1rem;
-            color: rgba(224, 230, 255, 0.7);
-        }
-        
-        /* Stats Cards */
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-        }
-        
-        .stat-card {
-            background: linear-gradient(135deg, rgba(0, 150, 255, 0.15), rgba(100, 50, 255, 0.15));
-            border: 1px solid rgba(100, 150, 255, 0.4);
-            border-radius: 12px;
-            padding: 1.5rem;
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-            box-shadow: 0 0 20px rgba(0, 150, 255, 0.1);
-        }
-        
-        .stat-card:hover {
-            border-color: rgba(100, 150, 255, 0.8);
-            box-shadow: 0 0 40px rgba(0, 150, 255, 0.3);
-            transform: translateY(-5px);
-        }
-        
-        .stat-label {
-            font-size: 0.9rem;
-            color: rgba(224, 230, 255, 0.6);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 0.5rem;
-        }
-        
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #00d4ff;
-        }
-        
-        /* Chart Cards */
-        .chart-container {
-            background: linear-gradient(135deg, rgba(15, 20, 40, 0.8), rgba(25, 30, 55, 0.8));
-            border: 1px solid rgba(100, 150, 255, 0.3);
-            border-radius: 15px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 0 30px rgba(0, 150, 255, 0.15);
-            transition: all 0.3s ease;
-        }
-        
-        .chart-container:hover {
-            border-color: rgba(100, 150, 255, 0.6);
-            box-shadow: 0 0 50px rgba(0, 150, 255, 0.25);
-        }
-        
-        .chart-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #00d4ff;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid rgba(100, 150, 255, 0.3);
-        }
-        
-        .plotly-graph-div {
-            background: transparent !important;
-        }
-        
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-        }
-        
-        .empty-state p {
-            font-size: 1.2rem;
-            color: rgba(224, 230, 255, 0.6);
-            margin-bottom: 2rem;
-        }
-        
-        /* Action Button */
-        .btn-action {
-            display: inline-block;
-            margin-top: 2rem;
-            padding: 0.8rem 2rem;
-            background: linear-gradient(135deg, #00d4ff, #6b6eff);
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            border: none;
-            cursor: pointer;
-        }
-        
-        .btn-action:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(0, 150, 255, 0.4);
-            color: white;
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .stats-container {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        /* Loading Animation */
-        .loading {
-            text-align: center;
-            padding: 2rem;
-            color: #00d4ff;
-        }
-        
-        .spinner {
-            display: inline-block;
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(0, 150, 255, 0.3);
-            border-top-color: #00d4ff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        .container { position: relative; z-index: 1; padding: 2rem 0; }
+        .header { text-align: center; margin-bottom: 3rem; padding: 2rem; background: rgba(20, 25, 50, 0.5); border: 1px solid rgba(100, 150, 255, 0.3); border-radius: 15px; backdrop-filter: blur(10px); box-shadow: 0 0 30px rgba(0, 150, 255, 0.1); }
+        .header h1 { font-size: 3rem; font-weight: 700; background: linear-gradient(135deg, #00d4ff, #6b6eff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 0.5rem; text-shadow: 0 0 20px rgba(0, 150, 255, 0.3); }
+        .header p { font-size: 1.1rem; color: rgba(224, 230, 255, 0.7); }
+        .stats-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
+        .stat-card { background: linear-gradient(135deg, rgba(0, 150, 255, 0.15), rgba(100, 50, 255, 0.15)); border: 1px solid rgba(100, 150, 255, 0.4); border-radius: 12px; padding: 1.5rem; backdrop-filter: blur(10px); transition: all 0.3s ease; box-shadow: 0 0 20px rgba(0, 150, 255, 0.1); }
+        .stat-card:hover { border-color: rgba(100, 150, 255, 0.8); box-shadow: 0 0 40px rgba(0, 150, 255, 0.3); transform: translateY(-5px); }
+        .stat-label { font-size: 0.9rem; color: rgba(224, 230, 255, 0.6); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
+        .stat-value { font-size: 2rem; font-weight: 700; color: #00d4ff; }
+        .chart-container { background: linear-gradient(135deg, rgba(15, 20, 40, 0.8), rgba(25, 30, 55, 0.8)); border: 1px solid rgba(100, 150, 255, 0.3); border-radius: 15px; padding: 2rem; margin-bottom: 2rem; backdrop-filter: blur(10px); box-shadow: 0 0 30px rgba(0, 150, 255, 0.15); transition: all 0.3s ease; }
+        .chart-container:hover { border-color: rgba(100, 150, 255, 0.6); box-shadow: 0 0 50px rgba(0, 150, 255, 0.25); }
+        .chart-title { font-size: 1.5rem; font-weight: 600; color: #00d4ff; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid rgba(100, 150, 255, 0.3); }
+        .plotly-graph-div { background: transparent !important; }
+        .btn-action { display: inline-block; margin-top: 2rem; padding: 0.8rem 2rem; background: linear-gradient(135deg, #00d4ff, #6b6eff); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.3s ease; border: none; cursor: pointer; }
+        .btn-action:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0, 150, 255, 0.4); color: white; }
+        @media (max-width: 768px) { .header h1 { font-size: 2rem; } .stats-container { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -253,29 +88,38 @@
         
         <!-- Charts Grid -->
         <div class="row">
-            {% if dist_json %}
+            {% if scatter_json %}
             <div class="col-lg-6 mb-4">
                 <div class="chart-container">
-                    <div class="chart-title">Habitability Distribution</div>
-                    <div id="distribution-chart" style="width: 100%; height: 400px;"></div>
+                    <div class="chart-title">Planet Radius vs Mass</div>
+                    <div id="scatter-chart" style="width: 100%; height: 400px;"></div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if box_json %}
+            <div class="col-lg-6 mb-4">
+                <div class="chart-container">
+                    <div class="chart-title">Planet Radius Distribution by Habitability</div>
+                    <div id="box-chart" style="width: 100%; height: 400px;"></div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if orbit_json %}
+            <div class="col-12 mb-4">
+                <div class="chart-container">
+                    <div class="chart-title">Habitability vs Orbital Distance</div>
+                    <div id="orbit-chart" style="width: 100%; height: 500px;"></div>
                 </div>
             </div>
             {% endif %}
             
             {% if importance_json %}
-            <div class="col-lg-6 mb-4">
+            <div class="col-12 mb-4">
                 <div class="chart-container">
                     <div class="chart-title">Feature Importance</div>
                     <div id="importance-chart" style="width: 100%; height: 400px;"></div>
-                </div>
-            </div>
-            {% endif %}
-            
-            {% if corr_json %}
-            <div class="col-12 mb-4">
-                <div class="chart-container">
-                    <div class="chart-title">Parameter Correlations</div>
-                    <div id="correlation-chart" style="width: 100%; height: 500px;"></div>
                 </div>
             </div>
             {% endif %}
@@ -294,51 +138,39 @@
         </div>
     {% endif %}
 </div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
     {% if stats_json %}
-    try {
-        const stats = {{ stats_json | safe }};
-        document.getElementById('total-planets').textContent = stats.total_planets;
-        document.getElementById('avg-habitability').textContent = stats.avg_habitability;
-        document.getElementById('max-habitability').textContent = stats.max_habitability;
-        document.getElementById('habitable-count').textContent = stats.habitable_count;
-    } catch (e) {
-        console.error('Error loading stats:', e);
-    }
+    var stats = {{ stats_json | tojson | safe }};
+    document.getElementById('total-planets').textContent = stats.total_planets;
+    document.getElementById('avg-habitability').textContent = stats.avg_habitability;
+    document.getElementById('max-habitability').textContent = stats.max_habitability;
+    document.getElementById('habitable-count').textContent = stats.habitable_count;
     {% endif %}
 
-    {% if dist_json %}
-    try {
-        const distData = {{ dist_json | safe }};
-        Plotly.newPlot('distribution-chart', distData.data, distData.layout, {responsive: true});
-    } catch (e) {
-        console.error('Error rendering distribution chart:', e);
-    }
+    {% if scatter_json %}
+    var scatterData = {{ scatter_json | tojson | safe }};
+    Plotly.newPlot('scatter-chart', scatterData.data, scatterData.layout, {responsive:true});
+    {% endif %}
+
+    {% if box_json %}
+    var boxData = {{ box_json | tojson | safe }};
+    Plotly.newPlot('box-chart', boxData.data, boxData.layout, {responsive:true});
+    {% endif %}
+
+    {% if orbit_json %}
+    var orbitData = {{ orbit_json | tojson | safe }};
+    Plotly.newPlot('orbit-chart', orbitData.data, orbitData.layout, {responsive:true});
     {% endif %}
 
     {% if importance_json %}
-    try {
-        const importanceData = {{ importance_json | safe }};
-        Plotly.newPlot('importance-chart', importanceData.data, importanceData.layout, {responsive: true});
-    } catch (e) {
-        console.error('Error rendering importance chart:', e);
-    }
-    {% endif %}
-
-    {% if corr_json %}
-    try {
-        const corrData = {{ corr_json | safe }};
-        Plotly.newPlot('correlation-chart', corrData.data, corrData.layout, {responsive: true});
-    } catch (e) {
-        console.error('Error rendering correlation chart:', e);
-    }
+    var importanceData = {{ importance_json | tojson | safe }};
+    Plotly.newPlot('importance-chart', importanceData.data, importanceData.layout, {responsive:true});
     {% endif %}
 
 });
 </script>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

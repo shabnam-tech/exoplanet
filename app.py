@@ -4,10 +4,6 @@ import joblib
 import pandas as pd
 import numpy as np
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-from io import BytesIO
-import base64
 import os
 import plotly.graph_objects as go
 import plotly.express as px
@@ -120,6 +116,7 @@ def predict():
     prediction = model.predict(input_df)[0]
     probability = model.predict_proba(input_df)[0][1]
 
+
     # Save to database
     conn = get_db()
     cursor = conn.cursor()
@@ -207,7 +204,10 @@ def rank():
         return render_template("rank.html", data=None)
 
     X = df[features]
-    df["habitability_score"] = model.predict_proba(X)[:, 1]
+    scores = model.predict_proba(X)[:, 1]
+    df["habitability_score"] = pd.to_numeric(scores, errors="coerce")
+    df = df.dropna(subset=["habitability_score"])
+
     ranked = df.sort_values("habitability_score", ascending=False)
 
     return render_template("rank.html", data=ranked.to_dict(orient="records"))
@@ -375,119 +375,139 @@ def export_pdf():
 
 @app.route("/dashboard")
 def dashboard():
-    conn = get_db()
-    df = pd.read_sql_query("SELECT * FROM planets", conn)
-    conn.close()
+    try:
+        print("DEBUG: Dashboard route called")
+        conn = get_db()
+        df = pd.read_sql_query("SELECT * FROM planets", conn)
+        conn.close()
+        
+        print(f"DEBUG: Retrieved {len(df)} planets from database")
 
-    if df.empty:
+        if df.empty:
+            print("DEBUG: DataFrame is empty")
+            return render_template("dashboard.html", 
+                                 scatter_json=None, 
+                                 box_json=None,
+                                 orbit_json=None,
+                                 importance_json=None,
+                                 stats_json=None)
+
+        # Compute habitability score
+        X = df[features]
+        print(f"DEBUG: Computing predictions for {len(X)} planets")
+        df["habitability_score"] = model.predict_proba(X)[:, 1]
+
+        # Assign habitability class
+        df["habitability_class"] = np.where(df["habitability_score"] > 0.5, "Habitable", "Non-Habitable")
+        
+        print(f"DEBUG: Average habitability: {df['habitability_score'].mean()}")
+
+        # 1. Scatter Plot: Planet Radius vs Mass
+        fig_scatter = px.scatter(
+            df,
+            x="pl_rade",
+            y="pl_bmasse",
+            color="habitability_score",
+            size="pl_luminosity",
+            hover_data=["st_teff", "st_met"],
+            color_continuous_scale="Viridis",
+            title="Planet Radius vs Mass (Colored by Habitability Score)"
+        )
+        fig_scatter.update_layout(template="plotly_dark", plot_bgcolor="rgba(20,20,30,0.8)", paper_bgcolor="rgba(10,10,20,0.9)")
+        scatter_json = json.loads(json.dumps(fig_scatter.to_dict(), cls=NumpyEncoder))
+        print("DEBUG: Created scatter chart")
+
+        # 2. Box Plot: Planet Radius by Habitability Class
+        fig_box = px.box(
+            df,
+            x="habitability_class",
+            y="pl_rade",
+            color="habitability_class",
+            title="Planet Radius Distribution by Habitability",
+            color_discrete_map={"Habitable":"#00d4ff","Non-Habitable":"#6b6eff"}
+        )
+        fig_box.update_layout(template="plotly_dark", plot_bgcolor="rgba(20,20,30,0.8)", paper_bgcolor="rgba(10,10,20,0.9)")
+        box_json = json.loads(json.dumps(fig_box.to_dict(), cls=NumpyEncoder))
+        print("DEBUG: Created box chart")
+
+        # 3. Habitability vs Orbital Distance
+        fig_orbit = px.scatter(
+            df,
+            x="pl_orbsmax",
+            y="habitability_score",
+            color="habitability_score",
+            size="pl_bmasse",
+            color_continuous_scale="Viridis",
+            title="Habitability Score vs Orbital Distance"
+        )
+        fig_orbit.update_layout(template="plotly_dark", plot_bgcolor="rgba(20,20,30,0.8)", paper_bgcolor="rgba(10,10,20,0.9)")
+        orbit_json = json.loads(json.dumps(fig_orbit.to_dict(), cls=NumpyEncoder))
+        print("DEBUG: Created orbit chart")
+
+        # 4. Feature Importance
+        importance_json = None
+        if hasattr(model.named_steps["classifier"], "feature_importances_"):
+            importances = model.named_steps["classifier"].feature_importances_
+            importance_df = pd.DataFrame({
+                "Feature": features,
+                "Importance": importances
+            }).sort_values("Importance", ascending=True)
+            
+            fig_importance = go.Figure()
+            fig_importance.add_trace(go.Bar(
+                y=importance_df["Feature"],
+                x=importance_df["Importance"],
+                orientation="h",
+                marker=dict(
+                    color=importance_df["Importance"],
+                    colorscale="Viridis",
+                    showscale=True,
+                    colorbar=dict(title="Importance")
+                ),
+                text=importance_df["Importance"].round(4),
+                textposition="outside"
+            ))
+            fig_importance.update_layout(
+                title="<b>Feature Importance in Habitability Prediction</b>",
+                xaxis_title="Importance Score",
+                yaxis_title="Features",
+                template="plotly_dark",
+                plot_bgcolor="rgba(20, 20, 30, 0.8)",
+                paper_bgcolor="rgba(10, 10, 20, 0.9)",
+                font=dict(color="white", size=11),
+                hovermode="y",
+                height=400
+            )
+            importance_json = json.loads(json.dumps(fig_importance.to_dict(), cls=NumpyEncoder))
+            print("DEBUG: Created importance chart")
+
+        # 5. Key statistics
+        stats = {
+            "total_planets": int(len(df)),
+            "avg_habitability": round(float(df["habitability_score"].mean()), 3),
+            "max_habitability": round(float(df["habitability_score"].max()), 3),
+            "habitable_count": int(len(df[df["habitability_score"] > 0.5]))
+        }
+        stats_json = stats
+        print(f"DEBUG: Stats computed: {stats}")
+
+        return render_template("dashboard.html",
+                               scatter_json=scatter_json,
+                               box_json=box_json,
+                               orbit_json=orbit_json,
+                               importance_json=importance_json,
+                               stats_json=stats_json)
+    except Exception as e:
+        print(f"ERROR in dashboard: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return render_template("dashboard.html", 
-                             dist_json=None, 
-                             corr_json=None, 
+                             scatter_json=None, 
+                             box_json=None,
+                             orbit_json=None,
                              importance_json=None,
                              stats_json=None)
 
-    X = df[features]
-    df["habitability_score"] = model.predict_proba(X)[:, 1]
-    
-    # 1. Habitability Score Distribution - Interactive Histogram
-    fig_dist = go.Figure()
-    fig_dist.add_trace(go.Histogram(
-        x=df["habitability_score"],
-        nbinsx=20,
-        name="Habitability Score",
-        marker=dict(color="rgba(0, 150, 255, 0.7)", line=dict(color="rgba(0, 100, 200, 1)"))
-    ))
-    fig_dist.update_layout(
-        title="<b>Habitability Score Distribution</b>",
-        xaxis_title="Habitability Score",
-        yaxis_title="Number of Planets",
-        template="plotly_dark",
-        plot_bgcolor="rgba(20, 20, 30, 0.8)",
-        paper_bgcolor="rgba(10, 10, 20, 0.9)",
-        font=dict(color="white", size=12),
-        hovermode="x unified",
-        showlegend=False
-    )
-    dist_json = json.dumps(fig_dist.to_dict(), cls=NumpyEncoder)
-    
-    # 2. Feature Importance
-    importance_json = None
-    if hasattr(model.named_steps["classifier"], "feature_importances_"):
-        importances = model.named_steps["classifier"].feature_importances_
-        importance_df = pd.DataFrame({
-            "Feature": features,
-            "Importance": importances
-        }).sort_values("Importance", ascending=True)
-        
-        fig_importance = go.Figure()
-        fig_importance.add_trace(go.Bar(
-            y=importance_df["Feature"],
-            x=importance_df["Importance"],
-            orientation="h",
-            marker=dict(
-                color=importance_df["Importance"],
-                colorscale="Viridis",
-                showscale=True,
-                colorbar=dict(title="Importance")
-            ),
-            text=importance_df["Importance"].round(4),
-            textposition="outside"
-        ))
-        fig_importance.update_layout(
-            title="<b>Feature Importance in Habitability Prediction</b>",
-            xaxis_title="Importance Score",
-            yaxis_title="Features",
-            template="plotly_dark",
-            plot_bgcolor="rgba(20, 20, 30, 0.8)",
-            paper_bgcolor="rgba(10, 10, 20, 0.9)",
-            font=dict(color="white", size=11),
-            hovermode="y",
-            height=400
-        )
-        importance_json = json.dumps(fig_importance.to_dict(), cls=NumpyEncoder)
-    
-    # 3. Star-Planet Parameter Correlations
-    corr_features = [f for f in features if f in df.columns]
-    if len(corr_features) > 1:
-        corr_matrix = df[corr_features + ["habitability_score"]].corr()
-        
-        fig_corr = go.Figure(data=go.Heatmap(
-            z=corr_matrix.values,
-            x=corr_matrix.columns,
-            y=corr_matrix.columns,
-            colorscale="RdBu",
-            zmid=0,
-            text=np.round(corr_matrix.values, 2),
-            texttemplate="%{text}",
-            textfont={"size": 10},
-            colorbar=dict(title="Correlation")
-        ))
-        fig_corr.update_layout(
-            title="<b>Parameter Correlation Matrix</b>",
-            template="plotly_dark",
-            plot_bgcolor="rgba(20, 20, 30, 0.8)",
-            paper_bgcolor="rgba(10, 10, 20, 0.9)",
-            font=dict(color="white", size=11),
-            height=500
-        )
-        corr_json = json.dumps(fig_corr.to_dict(), cls=NumpyEncoder)
-    else:
-        corr_json = None
-    
-    # 4. Key Statistics
-    stats = {
-        "total_planets": len(df),
-        "avg_habitability": round(df["habitability_score"].mean(), 3),
-        "max_habitability": round(df["habitability_score"].max(), 3),
-        "habitable_count": len(df[df["habitability_score"] > 0.5])
-    }
-    stats_json = json.dumps(stats)
-    
-    return render_template("dashboard.html", 
-                         dist_json=dist_json,
-                         corr_json=corr_json,
-                         importance_json=importance_json,
-                         stats_json=stats_json)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
